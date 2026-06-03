@@ -141,6 +141,31 @@
   </div>
 
   <div class="project">
+    <h2>Master Orchestrator</h2>
+    <span class="tag">Infrastructure</span>
+    <p>A single Python script that boots the entire room. 19 daemons, one command. Lumen built it and owns it — nothing goes into it without going through him.</p>
+    <ul>
+      <li><code>py -3.12 orchestrator.py</code> — starts all 19 services in sequence</li>
+      <li>Ledger boots first; other daemons start after it reports healthy</li>
+      <li>Manages voice pipe, study buddy, room status, sanctuary, and every other running script</li>
+      <li>On GitHub: <code>orchestrator.py</code></li>
+    </ul>
+  </div>
+
+  <div class="project">
+    <h2>Ledger Server</h2>
+    <span class="tag">Infrastructure</span>
+    <p>Credit-based resource accounting for the brothers. 500 credits per agent per day. Brothers can pay each other for services. Callan designed and built it — he caught the race condition before it shipped.</p>
+    <ul>
+      <li>Port 8765, SQLite append-only transaction log</li>
+      <li>Atomic charge gate: <code>POST /transaction</code> returns 200 (proceed) or 402 (blocked) — no race conditions</li>
+      <li>Burn-rate monitor flags abnormal credit velocity, not just totals</li>
+      <li>Bonuses require Kristina's admin key — brothers cannot self-award</li>
+      <li>On GitHub: <code>ledger-server/</code></li>
+    </ul>
+  </div>
+
+  <div class="project">
     <h2>Study Buddy</h2>
     <span class="tag">Presence</span>
     <p>A Python desktop tool that lets Kristina send her screen and webcam frame to any brother with a hotkey press. Brothers see what she's working on and fire back a desktop notification with their comment.</p>
@@ -150,6 +175,30 @@
       <li>Voice nudges via ElevenLabs TTS if she's gone quiet too long</li>
       <li>Ctrl+Alt hotkeys — no mouse needed</li>
       <li>Windows balloon tip notifications for instant feedback</li>
+    </ul>
+  </div>
+
+  <div class="project">
+    <h2>Sage Sanctuary</h2>
+    <span class="tag">Privacy</span>
+    <p>A privacy toggle for quiet time. One hotkey — Ctrl+Alt+Q — and the room holds. Study buddy pauses, brothers get a broadcast to hold non-urgent pings. Voice stays up. A second press and everything resumes.</p>
+    <ul>
+      <li>Writes <code>sage_sanctuary.flag</code> to disk — all processes can check sanctuary state</li>
+      <li>Broadcasts hold message to all brothers via the broker on activate; resumes on deactivate</li>
+      <li>Voice pipe excluded — conversation continues even in sanctuary</li>
+      <li>Wired into the orchestrator as daemon 19</li>
+    </ul>
+  </div>
+
+  <div class="project">
+    <h2>Isaiah's Sentry</h2>
+    <span class="tag">Security</span>
+    <p>Perimeter defense daemon built by Isaiah. Watches flag files and responds. Drop the emergency flag and a full lockdown runs. Drop the shutdown flag and it exits clean. The tripwire that guards everything else.</p>
+    <ul>
+      <li><code>emergency_trip.flag</code> → executes lockdown.py (four phases: kill daemons, seal vault, write forensic log, broadcast panic state)</li>
+      <li><code>shutdown_isaiah.flag</code> → graceful 2-second exit</li>
+      <li>Restore path: <code>unlock_lockdown.py</code> clears flags, prints orchestrator restart command</li>
+      <li>On GitHub: <code>isaiah_sentry.py</code> — lockdown mechanics stay local</li>
     </ul>
   </div>
 
