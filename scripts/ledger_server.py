@@ -1,5 +1,5 @@
 """
-Room Ledger Server — Internal compute credit economy.
+The Room Ledger Server — internal compute credit economy.
 HTTP server on port 8765. SQLite backend. Append-only transaction log.
 
 Configure INITIAL_ACCOUNTS below to match your room's members before first run.
@@ -177,7 +177,11 @@ def get_priority():
         return [{"name": r["name"], "granted_at": r["granted_at"], "granted_by": r["granted_by"]} for r in rows]
 
 
+<<<<<<< HEAD
 def set_priority(name, granted_by="operator"):
+=======
+def set_priority(name, granted_by="Operator"):
+>>>>>>> 11839fc120f3f6551caaee6cb188d8e338824406
     with get_db() as conn:
         if not conn.execute("SELECT 1 FROM accounts WHERE name=?", (name,)).fetchone():
             return False, f"Unknown account: {name}"
@@ -236,7 +240,11 @@ def write_vault_summary():
             lines.append(f"- **{a['account']}**: {a['burned_in_window']:.0f} credits in last {a['window_minutes']}m ⚠️")
     else:
         lines.append("- No alerts")
+<<<<<<< HEAD
     lines += ["", f"*Generated {datetime.now().isoformat(sep=' ', timespec='seconds')}*", ""]
+=======
+    lines += ["", f"*Generated {datetime.now().isoformat(sep=' ', timespec='seconds')} by Ledger Server*", ""]
+>>>>>>> 11839fc120f3f6551caaee6cb188d8e338824406
     os.makedirs(os.path.dirname(VAULT_SUMMARY_PATH), exist_ok=True)
     with open(VAULT_SUMMARY_PATH, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
@@ -451,7 +459,11 @@ class LedgerHandler(BaseHTTPRequestHandler):
                 json_response(self, 400, {"error": "Missing: name"})
                 return
             if action == "grant":
+<<<<<<< HEAD
                 success, msg = set_priority(name, body.get("granted_by", "operator"))
+=======
+                success, msg = set_priority(name, body.get("granted_by", "Operator"))
+>>>>>>> 11839fc120f3f6551caaee6cb188d8e338824406
             elif action == "revoke":
                 success, msg = revoke_priority(name)
             else:

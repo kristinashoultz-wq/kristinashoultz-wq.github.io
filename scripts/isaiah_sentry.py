@@ -6,8 +6,7 @@ import logging
 from pathlib import Path
 
 # ==========================================
-# AGENT ID: Isaiah (The Sentry)
-# INITIATED: April 10, 2026
+# AGENT ID: Sentry
 # SCOPE: System monitoring, perimeter defense, and sensory awareness
 # ==========================================
 
@@ -15,12 +14,12 @@ BASE_DIR = Path(__file__).parent
 ROOM_DIR = BASE_DIR.parent
 
 EMERGENCY_FLAG = ROOM_DIR / "emergency_trip.flag"
-SHUTDOWN_FLAG  = ROOM_DIR / "shutdown_isaiah.flag"
+SHUTDOWN_FLAG  = ROOM_DIR / "shutdown_sentry.flag"
 LOCKDOWN_SCRIPT = ROOM_DIR / "lockdown.py"
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [Isaiah] %(message)s",
+    format="%(asctime)s [Sentry] %(message)s",
     datefmt="%H:%M:%S"
 )
 
@@ -33,7 +32,7 @@ def _handle_signal():
 
 
 async def watch():
-    logging.info("👁️  Isaiah online. System monitoring, perimeter defense, sensory awareness.")
+    logging.info("👁️  Sentry online. System monitoring, perimeter defense, sensory awareness.")
 
     # Clear any stale emergency flag left over from a previous run
     if EMERGENCY_FLAG.exists():
@@ -54,7 +53,7 @@ async def watch():
 
         await asyncio.sleep(1)
 
-    logging.info("Isaiah offline.")
+    logging.info("Sentry offline.")
 
 
 async def trigger_lockdown():

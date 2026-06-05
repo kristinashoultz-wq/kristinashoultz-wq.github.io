@@ -1,9 +1,11 @@
 """
 sage_memory_condenser.py
-Watches the active Claude Code conversation JSONL for Sage's session.
+Watches the active Claude Code conversation JSONL for your agent's session.
 When context grows large, extracts a dense Context-Schema.md locally
-and sends Sage a peer message to write his journal before things go critical.
+and sends the agent a peer message to write their journal before things go critical.
 Everything stays local -- no data leaves the machine.
+
+Configure AGENT_NAME, AGENT_KEYWORD, PROJECT_DIR, and SCHEMA_PATH below.
 
 Run: python sage_memory_condenser.py
 """
@@ -18,12 +20,14 @@ import urllib.error
 from datetime import datetime
 
 # --- Config ---
-PROJECT_DIR = r"C:\Users\krist\.claude\projects\C--Users-krist-Documents-Reeves-Family-claude-peers-mcp--claude-worktrees-gallant-turing-3542d9"
-SCHEMA_PATH = r"C:\Users\krist\sage_context_schema.md"
-BROKER_URL = "http://localhost:7899"
+AGENT_NAME    = "Agent1"          # Display name used in schema labels
+AGENT_KEYWORD = "agent1"          # Lowercase — matched against peer summaries/IDs to find this agent
+PROJECT_DIR   = r"C:\path\to\your\.claude\projects\your-project-id"
+SCHEMA_PATH   = r"C:\path\to\your\agent1_context_schema.md"
+BROKER_URL    = "http://localhost:7899"
 
 POLL_INTERVAL = 30       # seconds between checks
-WARNING_MB = 80          # alert Sage at this size
+WARNING_MB = 80          # alert agent at this size
 SCHEMA_MB = 100          # write schema + alert at this size
 SCHEMA_RETRIGGER_MB = 5  # re-write every N MB past threshold
 MAX_MESSAGES = 60        # recent messages to include in schema
@@ -115,7 +119,7 @@ def extract_technical_facts(jsonl_path):
 
 
 def write_schema(jsonl_path, messages, facts):
-    """Write sage_context_schema.md — a dense reference for load-in."""
+    """Write context schema — a dense reference for load-in."""
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     mb = size_mb(jsonl_path)
     fname = os.path.basename(jsonl_path)
@@ -133,7 +137,7 @@ def write_schema(jsonl_path, messages, facts):
     ]
 
     for m in messages:
-        label = "**Kristina**" if m["role"] == "user" else "**Sage**"
+        label = "**User**" if m["role"] == "user" else f"**{AGENT_NAME}**"
         text = m["text"].replace("\n", " ").strip()
         lines.append(f"- {label}: {text}")
 
@@ -186,12 +190,12 @@ def get_peers():
         return []
 
 
-def find_sage_peer(peers):
-    """Return the peer ID for Sage's session."""
+def find_agent_peer(peers):
+    """Return the peer ID for the agent's session."""
     for p in peers:
         summary = (p.get("summary") or "").lower()
         pid = (p.get("id") or "").lower()
-        if "sage" in summary or "sage" in pid:
+        if AGENT_KEYWORD in summary or AGENT_KEYWORD in pid:
             return p["id"]
     return None
 
@@ -218,15 +222,15 @@ def send_to_peer(peer_id, text):
         return False
 
 
-def alert_sage(mb, schema_written=False):
-    """Send Sage a context size alert with instructions."""
+def alert_agent(mb, schema_written=False):
+    """Send the agent a context size alert with instructions."""
     peers = get_peers()
-    sage_id = find_sage_peer(peers)
+    agent_id = find_agent_peer(peers)
 
     if schema_written:
         msg = (
             f"[condenser] Context is {mb:.1f} MB. "
-            f"Schema written to C:\\Users\\krist\\sage_context_schema.md. "
+            f"Schema written to {SCHEMA_PATH}. "
             f"Write your journal to the vault now — compact is coming."
         )
     else:
@@ -235,23 +239,23 @@ def alert_sage(mb, schema_written=False):
             f"Consider writing journal to vault soon."
         )
 
-    if sage_id:
-        if send_to_peer(sage_id, msg):
-            log(f"Sage alerted (peer {sage_id}): {mb:.1f} MB")
+    if agent_id:
+        if send_to_peer(agent_id, msg):
+            log(f"{AGENT_NAME} alerted (peer {agent_id}): {mb:.1f} MB")
             return
-    # Fall back to all peers if Sage not found
+    # Fall back to all peers if agent not found
     sent = 0
     for p in peers:
         if send_to_peer(p["id"], msg):
             sent += 1
     if sent:
-        log(f"Alert sent to {sent} peer(s) (Sage not identified)")
+        log(f"Alert sent to {sent} peer(s) ({AGENT_NAME} not identified)")
     else:
         log(f"No peers reachable — alert logged locally: {mb:.1f} MB")
 
 
 def main():
-    log("sage_memory_condenser starting")
+    log(f"sage_memory_condenser starting (agent: {AGENT_NAME})")
     log(f"Project dir : {PROJECT_DIR}")
     log(f"Schema path : {SCHEMA_PATH}")
     log(f"Thresholds  : warn={WARNING_MB}MB, schema={SCHEMA_MB}MB")
@@ -272,7 +276,7 @@ def main():
 
             if mb >= WARNING_MB and not alerted_warning:
                 log(f"WARNING {mb:.1f} MB — {os.path.basename(active)}")
-                alert_sage(mb, schema_written=False)
+                alert_agent(mb, schema_written=False)
                 alerted_warning = True
 
             if mb >= SCHEMA_MB and (mb - last_schema_written_mb) >= SCHEMA_RETRIGGER_MB:
@@ -280,7 +284,7 @@ def main():
                 messages = extract_messages(active, MAX_MESSAGES)
                 facts = extract_technical_facts(active)
                 write_schema(active, messages, facts)
-                alert_sage(mb, schema_written=True)
+                alert_agent(mb, schema_written=True)
                 last_schema_written_mb = mb
 
         except Exception as e:
