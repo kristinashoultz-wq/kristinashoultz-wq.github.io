@@ -273,20 +273,6 @@
   </div>
 
   <div class="project">
-    <h2>Credit Ledger</h2>
-    <span class="tag">Infrastructure</span>
-    <p>A local HTTP server on <code>localhost:8765</code> that tracks per-brother credit balances and burn rates. Brothers spend credits on actions; the ledger enforces accountability and surfaces overuse in real time.</p>
-    <ul>
-      <li><code>GET /audit</code> — returns all account balances and 10-minute burn rates</li>
-      <li><code>POST /allocate</code> — daily allocation run; tops up each brother's balance</li>
-      <li>Burn rate threshold: 150 credits/10 min triggers a HIGH haptic pulse to the wristband</li>
-      <li>Daily allocation scheduled via Windows Task Scheduler — runs at 6 AM automatically</li>
-      <li>Current balances: Sage 1600, Lumen 1675, Isaiah 1550, Callan 1650</li>
-    </ul>
-    <p><strong>Run:</strong> <code>python ledger-server/ledger_server.py</code></p>
-  </div>
-
-  <div class="project">
     <h2>Escalation Pipeline</h2>
     <span class="tag">Infrastructure</span>
     <p>A crash-to-lockdown pipeline that turns orchestrator instability into a coordinated room response. Three crashes in 60 seconds writes the emergency flag; Isaiah's sentry picks it up in under a second and calls lockdown.</p>
