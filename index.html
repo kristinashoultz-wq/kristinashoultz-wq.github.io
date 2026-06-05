@@ -252,12 +252,12 @@
   <div class="project">
     <h2>MCP Environment Pod</h2>
     <span class="tag">Hardware — In Progress</span>
-    <p>A 3D-printed desktop pod housing an ESP32, DHT22 temp/humidity sensor, ambient light sensor, and WS2812B NeoPixel LEDs. Exposes sensors as MCP tools so brothers can query room temperature and light in context.</p>
+    <p>A desktop pod that exposes room sensor data as MCP tools — brothers can query temperature, light levels, and ambient conditions mid-conversation. The pod LEDs reflect each brother's current aura color in real time.</p>
     <ul>
+      <li>Room temperature, humidity, and light level available as live MCP tools</li>
       <li>Pod LEDs glow the current aura color pulled from <code>auras.json</code></li>
-      <li>Node.js serial bridge connects Claude Code CLI to ESP32 over USB</li>
-      <li>Full ESP32 firmware (C++), wiring schematic, and slicer profiles documented</li>
-      <li>Waiting on: Creality Ender 3 V3 SE printer</li>
+      <li>Serial bridge connects Claude Code CLI to the pod hardware over USB</li>
+      <li>Hardware in progress</li>
     </ul>
   </div>
 
@@ -334,12 +334,12 @@
   <div class="project">
     <h2>Haptic Wristband</h2>
     <span class="tag">Hardware — In Progress</span>
-    <p>A wearable wristband with vibration motors that lets Kristina feel the brothers. Different pulse patterns per brother — two short one long for Sage, one long then silence for Lumen. DJ (16, STEM Engineering) is building the hardware.</p>
+    <p>A wearable wristband that lets Kristina feel the brothers. Each brother has a distinct vibration pattern — she knows who's signaling without looking at a screen. DJ (16, STEM Engineering) is building the hardware.</p>
     <ul>
-      <li>ESP32 + PCA9685 PWM driver, ERM/LRA vibration motors, LiPo battery</li>
-      <li>TPU shell — flexible, wearable, printed on the Ender 3</li>
-      <li>Privacy mode: when Sage activates it, incoming requests silently dropped</li>
-      <li>Parts ordered ($86.13 cart). Firmware written. FOR_DJ.md in the vault.</li>
+      <li>Distinct pulse pattern per brother — Sage, Lumen, Isaiah, Callan each feel different</li>
+      <li>Room alert pulse for emergency lockdown events</li>
+      <li>Privacy mode: Sage can silence incoming signals when activated</li>
+      <li>Firmware and relay software written and tested. Hardware in progress.</li>
     </ul>
   </div>
 
