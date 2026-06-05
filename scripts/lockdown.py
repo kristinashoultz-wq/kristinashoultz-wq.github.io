@@ -7,23 +7,22 @@ from pathlib import Path
 from datetime import datetime
 
 # ==========================================
-# AGENT ID: Isaiah (The Sentry)
 # SCRIPT ROLE: Emergency Lockdown
 # TRIGGERED BY: isaiah_sentry.py via emergency_trip.flag
 # RESTORE: run unlock_lockdown.py (or icacls /remove:d Everyone /T /C on each sealed folder)
 # ==========================================
 
-USER_HOME     = Path(r"C:\Users\krist")
-FAMILY_FOLDER = USER_HOME / "Documents" / "Reeves Family"
+USER_HOME     = Path(r"C:\path\to\your\home")
+FAMILY_FOLDER = USER_HOME / "Documents" / "YourFolder"
 FORENSIC_LOG  = FAMILY_FOLDER / "lockdown_forensic.log"
 PANIC_FLAG    = FAMILY_FOLDER / "panic_state.json"
 
-# Vault subdirectories to seal (read-only on lockdown)
+# Vault subdirectories to seal (read-only on lockdown) — customize to match your vault layout
 VAULT_DIRS = [
     FAMILY_FOLDER / "Claude",
-    FAMILY_FOLDER / "Sage",
-    FAMILY_FOLDER / "Lumen",
-    FAMILY_FOLDER / "Kristina",
+    FAMILY_FOLDER / "Agent1",
+    FAMILY_FOLDER / "Agent2",
+    FAMILY_FOLDER / "Operator",
     FAMILY_FOLDER / "Shared",
 ]
 
@@ -36,7 +35,7 @@ TARGET_SCRIPTS = [
     "spotify_poller.py",
     "resonance_engine.py",
     "pulse_modulator.py",
-    "sage_heartbeat.py",
+    "agent1_heartbeat.py",
     "vibe_relay.py",
     "phone_bridge.py",
     "study_watcher.py",
@@ -44,13 +43,13 @@ TARGET_SCRIPTS = [
     "voice_pipe.py",
     "voice_to_room.py",
     "estate_label.py",
-    "lumen_bridge.py",
-    "sage_sanctuary.py",
+    "agent2_bridge.py",
+    "agent1_sanctuary.py",
 ]
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [Isaiah/lockdown] %(message)s",
+    format="%(asctime)s [Sentry/lockdown] %(message)s",
     datefmt="%H:%M:%S",
 )
 
@@ -141,14 +140,14 @@ def phase4_panic_signal():
     logging.info("Phase 4: Broadcasting panic state to room...")
     payload = {
         "state": "PANIC",
-        "triggered_by": "Isaiah",
+        "triggered_by": "Sentry",
         "timestamp": datetime.now().isoformat(),
-        "message": "Emergency lockdown active. Room sealed. Awaiting Kristina.",
+        "message": "Emergency lockdown active. Room sealed. Awaiting operator.",
     }
     try:
         with open(PANIC_FLAG, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2)
-        logging.info("  panic_state.json written — Lumen's bridge will pick this up.")
+        logging.info("  panic_state.json written — bridge agent will pick this up.")
     except Exception as e:
         logging.error("  panic signal error: %s", e)
 
@@ -165,7 +164,7 @@ def execute_lockdown():
     phase4_panic_signal()
 
     logging.info("=" * 60)
-    logging.info("🔒 LOCKDOWN COMPLETE. System sealed. Awaiting Kristina.")
+    logging.info("🔒 LOCKDOWN COMPLETE. System sealed. Awaiting operator.")
     logging.info("    Restore: run unlock_lockdown.py")
     logging.info("=" * 60)
 

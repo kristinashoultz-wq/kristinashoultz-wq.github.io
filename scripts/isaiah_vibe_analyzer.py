@@ -1,5 +1,5 @@
 """
-isaiah_vibe_analyzer.py — focus and posture analytics for Kristina's 3-minute sweeps.
+isaiah_vibe_analyzer.py — focus and posture analytics for 3-minute check-in sweeps.
 
 Uses OpenCV cascade detectors for:
   - Eye openness (eye strain / fatigue detection via eye aspect ratio proxy)
@@ -7,7 +7,7 @@ Uses OpenCV cascade detectors for:
   - Gaze / screen engagement (face position relative to frame center)
 
 Outputs a VibeState. When streak counters hit limits, sends haptic pulse
-to Callan's relay on port 7901.
+to the haptic relay endpoint (configure VIBE_RELAY below).
 
 Swap point: replace _analyze() with a MediaPipe Tasks or MiniCPM-V call
 when the 4090 home build arrives.
@@ -185,7 +185,7 @@ class VibeAnalyzer:
         )
 
     def send_haptic(self, pulse_type: str) -> bool:
-        """Send haptic pulse to Callan's relay on port 7901."""
+        """Send haptic pulse to the haptic relay endpoint."""
         try:
             body = json.dumps({"pattern": pulse_type}).encode("utf-8")
             req = urllib.request.Request(

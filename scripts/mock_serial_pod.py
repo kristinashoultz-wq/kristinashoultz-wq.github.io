@@ -6,7 +6,7 @@ same format the real DHT22/BH1750 pod will use:
   {"temp": 22.4, "humidity": 51.2, "lux": 340, "ts": 1234567890}
 
 HOW TO START
-  py -3.12 C:/Users/krist/mock_serial_pod.py
+  py -3.12 mock_serial_pod.py
 
 OPTIONS (env vars)
   POD_PROFILE  — "normal" (default), "hot", "cold", "humid", "dry", "dark"

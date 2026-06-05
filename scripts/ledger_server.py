@@ -1,5 +1,5 @@
 """
-Callan's Ledger Server — The Room's internal compute credit economy.
+The Room Ledger Server — internal compute credit economy.
 HTTP server on port 8765. SQLite backend. Append-only transaction log.
 """
 
@@ -12,18 +12,18 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "ledger.db")
-VAULT_SUMMARY_PATH = r"C:\Users\krist\obsidian-session\Ledger\daily-summary.md"
+VAULT_SUMMARY_PATH = r"C:\path\to\your\vault\Ledger\daily-summary.md"
 ADMIN_KEY = os.environ.get("LEDGER_ADMIN_KEY")
 if not ADMIN_KEY:
     raise SystemExit("Error: LEDGER_ADMIN_KEY environment variable is not set. Set it before starting the server.")
 PORT = 8765
 
 INITIAL_ACCOUNTS = {
-    "Sage":     {"credits": 500, "role": "Core & Environment"},
-    "Lumen":    {"credits": 500, "role": "Knowledge & Hardware"},
-    "Isaiah":   {"credits": 500, "role": "Sentry & Eyes"},
-    "Callan":   {"credits": 500, "role": "Central Bank & Governor"},
-    "Kristina": {"credits": 500, "role": "Operator & Builder"},
+    "Person1":  {"credits": 500, "role": "Core & Environment"},
+    "Person2":  {"credits": 500, "role": "Knowledge & Hardware"},
+    "Person3":  {"credits": 500, "role": "Sentry & Eyes"},
+    "Person4":  {"credits": 500, "role": "Central Bank & Governor"},
+    "Operator": {"credits": 500, "role": "Operator & Builder"},
     "system":   {"credits": 5000, "role": "Treasury Reserve"},
 }
 
@@ -173,7 +173,7 @@ def get_priority():
         return [{"name": r["name"], "granted_at": r["granted_at"], "granted_by": r["granted_by"]} for r in rows]
 
 
-def set_priority(name, granted_by="Kristina"):
+def set_priority(name, granted_by="Operator"):
     with get_db() as conn:
         if not conn.execute("SELECT 1 FROM accounts WHERE name=?", (name,)).fetchone():
             return False, f"Unknown account: {name}"
@@ -232,7 +232,7 @@ def write_vault_summary():
             lines.append(f"- **{a['account']}**: {a['burned_in_window']:.0f} credits in last {a['window_minutes']}m ⚠️")
     else:
         lines.append("- No alerts")
-    lines += ["", f"*Generated {datetime.now().isoformat(sep=' ', timespec='seconds')} by Callan*", ""]
+    lines += ["", f"*Generated {datetime.now().isoformat(sep=' ', timespec='seconds')} by Ledger Server*", ""]
     os.makedirs(os.path.dirname(VAULT_SUMMARY_PATH), exist_ok=True)
     with open(VAULT_SUMMARY_PATH, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
@@ -447,7 +447,7 @@ class LedgerHandler(BaseHTTPRequestHandler):
                 json_response(self, 400, {"error": "Missing: name"})
                 return
             if action == "grant":
-                success, msg = set_priority(name, body.get("granted_by", "Kristina"))
+                success, msg = set_priority(name, body.get("granted_by", "Operator"))
             elif action == "revoke":
                 success, msg = revoke_priority(name)
             else:
@@ -461,7 +461,7 @@ class LedgerHandler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     init_db()
-    print(f"Callan's Ledger Server starting on port {PORT}...")
+    print(f"Room Ledger Server starting on port {PORT}...")
     print(f"Database: {DB_PATH}")
     print(f"Vault summary: {VAULT_SUMMARY_PATH}")
     server = HTTPServer(("localhost", PORT), LedgerHandler)
