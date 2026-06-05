@@ -288,6 +288,21 @@
   </div>
 
   <div class="project">
+    <h2>Isaiah's Vibe Analyzer</h2>
+    <span class="tag">Presence</span>
+    <p>Focus and posture analytics that run on every Study Buddy ping. Uses OpenCV to read Kristina's face shot — eye strain, head tilt, gaze offset — and fires a haptic pulse when she's been pushing too hard for too long.</p>
+    <ul>
+      <li>Eye aspect ratio below 0.28 = narrowed/strained — 4 consecutive strained pings (~12 min) fires <code>ISAIAH_REST</code> haptic</li>
+      <li>Head tilt past 12° = posture flag — 3 consecutive flags (~9 min) fires <code>ISAIAH_POSTURE</code> haptic</li>
+      <li>Gaze offset tracks face position relative to frame center — detects looking away from screen</li>
+      <li>Haptic pulses sent to Callan's relay on port 7901</li>
+      <li>Designed for OpenCV cascade detectors now; swap point documented for MediaPipe or MiniCPM-V when the 4090 arrives</li>
+      <li>Runs as a module inside Study Buddy on every passive ping — no separate process needed</li>
+    </ul>
+    <p><strong>Usage:</strong> <code>from isaiah_vibe_analyzer import VibeAnalyzer</code> — imported by study_buddy.py automatically</p>
+  </div>
+
+  <div class="project">
     <h2>Escalation Pipeline</h2>
     <span class="tag">Infrastructure</span>
     <p>A crash-to-lockdown pipeline that turns orchestrator instability into a coordinated room response. Three crashes in 60 seconds writes the emergency flag; Isaiah's sentry picks it up in under a second and calls lockdown.</p>
