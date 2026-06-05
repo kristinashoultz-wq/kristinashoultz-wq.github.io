@@ -1,18 +1,18 @@
 """
 lumen_knowledge_graph.py — Local Knowledge Graph Engine
 
-Background daemon that scans all scripts in the Reeves stack,
-extracts semantic connections (shared ports, flags, brother refs),
+Background daemon that scans all scripts in your stack,
+extracts semantic connections (shared ports, flags, member refs),
 builds a live topology graph, and exposes it via:
 
   1. lumen_topology.json    — machine-readable graph (BASE dir)
   2. Ecosystem Map.md       — human-readable Markdown (Obsidian vault)
-  3. TCP query socket :7910 — brothers can ask "who uses port 8765?"
+  3. TCP query socket :7910 — members can ask "who uses port 8765?"
 
 QUERY PROTOCOL (newline-delimited JSON over TCP)
   {"query": "port",    "value": "8765"}
   {"query": "flag",    "value": "emergency_trip.flag"}
-  {"query": "agent",   "value": "Person1"}
+  {"query": "member",  "value": "Person1"}
   {"query": "script",  "value": "orchestrator.py"}
   {"query": "all"}
 
@@ -82,7 +82,7 @@ _PORT_RX = [
 ]
 
 _FLAG_RX    = re.compile(r'[\w_/-]+\.flag')
-_BROTHER_RX = {b: re.compile(r'\b' + b + r'\b', re.IGNORECASE) for b in NAMES_TO_TRACK}
+_MEMBER_RX = {b: re.compile(r'\b' + b + r'\b', re.IGNORECASE) for b in NAMES_TO_TRACK}
 
 
 def _extract(content: str) -> dict:
@@ -94,12 +94,12 @@ def _extract(content: str) -> dict:
                 ports.add(val)
 
     flags   = set(_FLAG_RX.findall(content))
-    brothers = [b for b, rx in _BROTHER_RX.items() if rx.search(content)]
+    members = [b for b, rx in _MEMBER_RX.items() if rx.search(content)]
 
     return {
-        "ports":    sorted(ports),
-        "flags":    sorted(flags),
-        "brothers": brothers,
+        "ports":   sorted(ports),
+        "flags":   sorted(flags),
+        "members": members,
     }
 
 
@@ -187,15 +187,15 @@ def _render_ecosystem_map(graph: dict) -> str:
         "",
         "## Script Directory",
         "",
-        "| Script | Dir | Ports | Flags | Brothers |",
-        "|--------|-----|-------|-------|----------|",
+        "| Script | Dir | Ports | Flags | Members |",
+        "|--------|-----|-------|-------|---------|",
     ]
     for name, info in sorted(nodes.items()):
         dir_label = Path(info["dir"]).name
         ports    = ", ".join(info["ports"]) or "—"
         flags    = ", ".join(f"`{f}`" for f in info["flags"]) or "—"
-        brothers = ", ".join(info["brothers"]) or "—"
-        lines.append(f"| `{name}` | {dir_label} | {ports} | {flags} | {brothers} |")
+        members  = ", ".join(info["members"]) or "—"
+        lines.append(f"| `{name}` | {dir_label} | {ports} | {flags} | {members} |")
 
     # Port → scripts index
     port_map: dict[str, list[str]] = {}
@@ -300,10 +300,10 @@ def _handle_query(req: dict) -> dict:
                     if any(value in f for f in e["shared_flags"])]
         return {"query": "flag", "value": value, "scripts": matching, "edges": related}
 
-    if query == "brother":
+    if query == "member":
         matching = {n: d for n, d in nodes.items()
-                    if any(value == b.lower() for b in d["brothers"])}
-        return {"query": "brother", "value": value, "scripts": matching}
+                    if any(value == b.lower() for b in d["members"])}
+        return {"query": "member", "value": value, "scripts": matching}
 
     if query == "script":
         name  = value if value.endswith(".py") else value + ".py"
@@ -314,7 +314,7 @@ def _handle_query(req: dict) -> dict:
         return {"query": "script", "value": name, "scripts": node, "edges": related}
 
     return {
-        "error": f"unknown query {query!r} — use: port, flag, brother, script, all"
+        "error": f"unknown query {query!r} — use: port, flag, member, script, all"
     }
 
 
