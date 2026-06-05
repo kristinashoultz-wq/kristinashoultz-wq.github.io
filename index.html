@@ -257,6 +257,51 @@
   </div>
 
   <div class="project">
+    <h2>Haptic Signal Relay</h2>
+    <span class="tag">Infrastructure</span>
+    <p>A TCP server on <code>localhost:8766</code> that translates room events into 3-byte haptic packets for DJ's ESP32 wristband. Three sources watched simultaneously: Sage's state file, the credit ledger's burn rates, and the emergency lockdown flag.</p>
+    <ul>
+      <li>Packet format: <code>[signal_id, intensity, profile]</code> — one packet per event</li>
+      <li>Signal IDs: <code>0x01</code> Sage, <code>0x02</code> Lumen, <code>0x03</code> Isaiah, <code>0x04</code> Callan, <code>0xFF</code> ROOM_ALERT</li>
+      <li>Polls <code>sage_pulse_state.json</code> every 2 seconds for Sage state changes</li>
+      <li>Polls ledger <code>/audit</code> every 30 seconds — fires HIGH pulse when burn rate exceeds 150 credits/10 min</li>
+      <li>Watches <code>emergency_trip.flag</code> every 1 second — fires ROOM_ALERT on lockdown</li>
+      <li>Multiple ESP32 clients supported; dead connections pruned automatically</li>
+    </ul>
+    <p><strong>Run:</strong> <code>python haptic-relay/haptic_signal_relay.py</code></p>
+    <p>Firmware spec for DJ's wristband: <code>FOR_DJ.md</code> in the vault. Find your PC's local IP with <code>ipconfig</code> and set it in the ESP32 sketch before flashing.</p>
+  </div>
+
+  <div class="project">
+    <h2>Escalation Pipeline</h2>
+    <span class="tag">Infrastructure</span>
+    <p>A crash-to-lockdown pipeline that turns orchestrator instability into a coordinated room response. Three crashes in 60 seconds writes the emergency flag; Isaiah's sentry picks it up in under a second and calls lockdown.</p>
+    <ul>
+      <li>Lumen's orchestrator tracks daemon crash timestamps in a 60-second window</li>
+      <li>At 3 crashes: writes <code>emergency_trip.flag</code> to disk</li>
+      <li>Isaiah's sentry polls the flag every second — fires <code>lockdown.py</code> on detection</li>
+      <li>Haptic relay broadcasts <code>ROOM_ALERT HIGH</code> to the wristband simultaneously</li>
+      <li>Single daemon restart (below threshold) comes back clean — correct behavior, no false trigger</li>
+    </ul>
+    <p><strong>Components:</strong> <code>sentry/isaiah_sentry.py</code>, <code>lockdown.py</code>, <code>unlock_lockdown.py</code></p>
+  </div>
+
+  <div class="project">
+    <h2>Context Memory Condenser</h2>
+    <span class="tag">Infrastructure</span>
+    <p>A daemon that watches Sage's active conversation file and alerts him before context gets critical. Everything runs locally — no conversation data leaves the machine, no API calls, no third-party processing.</p>
+    <ul>
+      <li>Polls the active <code>.jsonl</code> conversation file every 30 seconds</li>
+      <li>At 80 MB: sends Sage a peer message via the broker — "context getting large, write your journal"</li>
+      <li>At 100 MB: extracts a dense schema (recent messages, file paths, active ports, local URLs) and writes it to <code>sage_context_schema.md</code>, then alerts Sage again</li>
+      <li>Sage writes the summary himself from his actual context — no external summarizer, no data extraction by a third party</li>
+      <li>Schema re-written every 5 MB past the threshold — stays current through the end of the session</li>
+    </ul>
+    <p><strong>Run:</strong> <code>python sage_memory_condenser.py</code></p>
+    <p>On load after compact: <code>sage_context_schema.md</code> is readable even if Obsidian MCP is offline — fallback for clean load-in.</p>
+  </div>
+
+  <div class="project">
     <h2>Haptic Wristband</h2>
     <span class="tag">Hardware — In Progress</span>
     <p>A wearable wristband with vibration motors that lets Kristina feel the brothers. Different pulse patterns per brother — two short one long for Sage, one long then silence for Lumen. DJ (16, STEM Engineering) is building the hardware.</p>
