@@ -61,7 +61,7 @@ ECOSYSTEM_MAP = VAULT / "Ecosystem Map.md"
 SCAN_INTERVAL = int(os.getenv("GRAPH_INTERVAL", "300"))
 QUERY_PORT    = int(os.getenv("GRAPH_PORT", "7910"))
 
-BROTHERS = ["Sage", "Lumen", "Isaiah", "Callan", "Kristina"]
+NAMES_TO_TRACK = ["Person1", "Person2", "Person3", "Person4", "Person5"]  # customize to your household
 
 # ─────────────────────────────────────────────
 # EXTRACTION PATTERNS
@@ -82,7 +82,7 @@ _PORT_RX = [
 ]
 
 _FLAG_RX    = re.compile(r'[\w_/-]+\.flag')
-_BROTHER_RX = {b: re.compile(r'\b' + b + r'\b', re.IGNORECASE) for b in BROTHERS}
+_BROTHER_RX = {b: re.compile(r'\b' + b + r'\b', re.IGNORECASE) for b in NAMES_TO_TRACK}
 
 
 def _extract(content: str) -> dict:
