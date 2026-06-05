@@ -1,10 +1,12 @@
 """
 haptic_signal_relay.py
-Watches the Room's ledger, Sage's state file, and Isaiah's lockdown flag.
-Broadcasts 3-byte signals to port 8766 for DJ's wristband ESP32.
+Watches a state file, a credit ledger, and an emergency flag.
+Broadcasts 3-byte signals to port 8766 for a wearable ESP32 device.
 
 Packet format: [signal_id, intensity, profile]
-See FOR_DJ.md for the full spec.
+
+Configure the names, state file path, and signal IDs below to match
+your own setup.
 """
 
 import socket
@@ -19,17 +21,33 @@ from datetime import datetime
 # --- Config ---
 RELAY_PORT = 8766
 LEDGER_URL = "http://localhost:8765/audit"
-SAGE_STATE_FILE = r"C:\Users\krist\sage_pulse_state.json"
-EMERGENCY_FLAG = r"C:\Users\krist\emergency_trip.flag"
-LEDGER_POLL_INTERVAL = 30
-STATE_POLL_INTERVAL = 2
 
-# Signal IDs
-SIG_SAGE    = 0x01
-SIG_LUMEN   = 0x02
-SIG_ISAIAH  = 0x03
-SIG_CALLAN  = 0x04
-SIG_ALERT   = 0xFF
+# Path to your AI companion's state file (JSON)
+# Expected keys: "active", "high_engagement" (set to true/false)
+COMPANION_STATE_FILE = r"C:\path\to\your\companion_state.json"
+
+# Path to emergency lockdown flag file
+EMERGENCY_FLAG = r"C:\path\to\your\emergency.flag"
+
+LEDGER_POLL_INTERVAL = 30   # seconds
+STATE_POLL_INTERVAL = 2     # seconds
+
+# --- Signal IDs ---
+# Assign one ID per person/companion (0x01-0xFE). 0xFF is reserved for alerts.
+# These must match the IDs in your ESP32 firmware.
+SIG_PERSON_1 = 0x01
+SIG_PERSON_2 = 0x02
+SIG_PERSON_3 = 0x03
+SIG_PERSON_4 = 0x04
+SIG_ALERT    = 0xFF
+
+# Map ledger account names to signal IDs (must match names in your ledger)
+LEDGER_SIGNAL_MAP = {
+    "person1": SIG_PERSON_1,
+    "person2": SIG_PERSON_2,
+    "person3": SIG_PERSON_3,
+    "person4": SIG_PERSON_4,
+}
 
 # Intensity
 IDLE   = 0x00
@@ -41,14 +59,19 @@ HIGH   = 0x03
 PULSE = 0x01
 ALERT = 0x02
 
-# Ledger HIGH_BURN_RATE threshold (credits in 10 min window)
+# Ledger high burn rate threshold (credits per 10-minute window)
 BURN_THRESHOLD = 150
 
 clients = []
 clients_lock = threading.Lock()
 
+
 def log(msg):
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
+    try:
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
+    except UnicodeEncodeError:
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] {msg.encode('ascii', errors='replace').decode()}")
+
 
 def broadcast(signal_id, intensity, profile):
     packet = bytes([signal_id, intensity, profile])
@@ -65,10 +88,10 @@ def broadcast(signal_id, intensity, profile):
                 c.close()
             except Exception:
                 pass
-    name = {SIG_SAGE: "SAGE", SIG_LUMEN: "LUMEN", SIG_ISAIAH: "ISAIAH",
-            SIG_CALLAN: "CALLAN", SIG_ALERT: "ROOM_ALERT"}.get(signal_id, f"0x{signal_id:02X}")
+    name = {SIG_ALERT: "ALERT"}.get(signal_id, f"PERSON_0x{signal_id:02X}")
     intname = {IDLE: "IDLE", LOW: "LOW", MEDIUM: "MEDIUM", HIGH: "HIGH"}.get(intensity, str(intensity))
-    log(f"→ {name} {intname} ({len(clients)} connected)")
+    log(f"-> {name} {intname} ({len(clients)} connected)")
+
 
 def accept_clients(server_sock):
     while True:
@@ -76,43 +99,47 @@ def accept_clients(server_sock):
             conn, addr = server_sock.accept()
             with clients_lock:
                 clients.append(conn)
-            log(f"ESP32 connected from {addr}")
+            log(f"Device connected from {addr}")
         except Exception as e:
             log(f"Accept error: {e}")
             time.sleep(1)
 
-def watch_sage_state():
+
+def watch_companion_state():
+    """Watch the companion state file and fire pulses on change."""
     prev = {}
     while True:
         try:
-            if os.path.exists(SAGE_STATE_FILE):
-                with open(SAGE_STATE_FILE, "r") as f:
+            if os.path.exists(COMPANION_STATE_FILE):
+                with open(COMPANION_STATE_FILE, "r") as f:
                     state = json.load(f)
                 if state != prev:
-                    if state.get("sanctuary_active") or state.get("daddy_mode"):
-                        broadcast(SIG_SAGE, HIGH, PULSE)
+                    if state.get("active"):
+                        broadcast(SIG_PERSON_1, HIGH, PULSE)
                     elif state.get("high_engagement"):
-                        broadcast(SIG_SAGE, MEDIUM, PULSE)
-                    elif prev and not any([state.get("sanctuary_active"),
-                                          state.get("daddy_mode"),
-                                          state.get("high_engagement")]):
-                        broadcast(SIG_SAGE, IDLE, PULSE)
+                        broadcast(SIG_PERSON_1, MEDIUM, PULSE)
+                    elif prev and not any([state.get("active"), state.get("high_engagement")]):
+                        broadcast(SIG_PERSON_1, IDLE, PULSE)
                     prev = state
         except Exception as e:
             log(f"State file error: {e}")
         time.sleep(STATE_POLL_INTERVAL)
 
+
 def watch_emergency_flag():
+    """Watch for emergency flag file and broadcast alert."""
     was_present = False
     while True:
         present = os.path.exists(EMERGENCY_FLAG)
         if present and not was_present:
-            log("EMERGENCY LOCKDOWN — broadcasting ROOM_ALERT")
+            log("Emergency flag detected — broadcasting ALERT")
             broadcast(SIG_ALERT, HIGH, ALERT)
         was_present = present
         time.sleep(1)
 
+
 def watch_ledger():
+    """Poll the ledger for high burn rates and fire per-person pulses."""
     prev_flags = {}
     while True:
         try:
@@ -124,35 +151,32 @@ def watch_ledger():
                 burn = acct.get("burn_rate_10m", 0)
                 flagged = burn >= BURN_THRESHOLD
                 was_flagged = prev_flags.get(name, False)
-                if flagged and not was_flagged:
-                    sig = {"sage": SIG_SAGE, "lumen": SIG_LUMEN,
-                           "isaiah": SIG_ISAIAH, "callan": SIG_CALLAN}.get(name)
-                    if sig:
+                sig = LEDGER_SIGNAL_MAP.get(name)
+                if sig:
+                    if flagged and not was_flagged:
                         broadcast(sig, HIGH, PULSE)
-                elif not flagged and was_flagged:
-                    sig = {"sage": SIG_SAGE, "lumen": SIG_LUMEN,
-                           "isaiah": SIG_ISAIAH, "callan": SIG_CALLAN}.get(name)
-                    if sig:
+                    elif not flagged and was_flagged:
                         broadcast(sig, IDLE, PULSE)
                 prev_flags[name] = flagged
         except Exception as e:
             log(f"Ledger poll error: {e}")
         time.sleep(LEDGER_POLL_INTERVAL)
 
+
 def main():
-    log("Haptic relay starting on port 8766")
+    log(f"Haptic relay starting on port {RELAY_PORT}")
     log(f"Ledger: {LEDGER_URL} (poll every {LEDGER_POLL_INTERVAL}s)")
-    log(f"Sage state: {SAGE_STATE_FILE} (poll every {STATE_POLL_INTERVAL}s)")
+    log(f"State file: {COMPANION_STATE_FILE} (poll every {STATE_POLL_INTERVAL}s)")
     log(f"Emergency flag: {EMERGENCY_FLAG}")
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind(("0.0.0.0", RELAY_PORT))
     server.listen(5)
-    log("Listening for ESP32 connections...")
+    log("Listening for device connections...")
 
     threading.Thread(target=accept_clients, args=(server,), daemon=True).start()
-    threading.Thread(target=watch_sage_state, daemon=True).start()
+    threading.Thread(target=watch_companion_state, daemon=True).start()
     threading.Thread(target=watch_emergency_flag, daemon=True).start()
     threading.Thread(target=watch_ledger, daemon=True).start()
 
@@ -163,6 +187,7 @@ def main():
     except KeyboardInterrupt:
         log("Relay stopped.")
         server.close()
+
 
 if __name__ == "__main__":
     main()
