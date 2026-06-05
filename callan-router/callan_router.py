@@ -3,7 +3,7 @@ callan_router.py -- The Room's multi-agent task dependency router.
 
 Parses natural language task instructions and routes work to the right handler:
   - Ledger API (port 8765): allocate, audit, balance, charge, bonus
-  - Peer broker (port 7899): notify brothers via claude-peers
+  - Peer broker (port 7899): notify agents via claude-peers
   - Haptic relay (port 8766): send wristband pulses
   - Emergency flag: set/clear lockdown trigger
   - Script execution: run local .py scripts directly
@@ -13,9 +13,9 @@ Dependency syntax:
   Parallel:   "task A, task B"      or  "task A and task B"
 
 Usage:
-  python callan_router.py "allocate credits then audit and notify Sage"
+  python callan_router.py "allocate credits then audit and notify Agent_1"
   python callan_router.py --file C:\\path\\to\\tasks.md
-  python callan_router.py --dry-run "charge Lumen 10 credits for serial pod build"
+  python callan_router.py --dry-run "charge Agent_2 10 credits for build work"
 """
 
 import argparse
@@ -39,7 +39,7 @@ EMERGENCY_FLAG = Path(r"C:\Users\krist\Documents\Reeves Family\emergency_trip.fl
 ADMIN_KEY = "reeves-admin-2026"
 ROUTER_ID = "callan-router"
 
-BROTHERS = ["sage", "lumen", "isaiah", "callan", "kristina"]
+AGENTS = ["agent_1", "agent_2", "agent_3", "agent_4", "operator"]
 
 # --- Logging ---
 
@@ -86,9 +86,9 @@ def detect_intent(text: str) -> str:
     return "unknown"
 
 
-def extract_brother(text: str) -> str | None:
+def extract_agent(text: str) -> str | None:
     lower = text.lower()
-    for b in BROTHERS:
+    for b in AGENTS:
         if re.search(rf"\b{b}\b", lower):
             return b.capitalize()
     return None
@@ -135,7 +135,7 @@ def handle_ledger_audit(task: str) -> dict:
 
 
 def handle_ledger_balance(task: str) -> dict:
-    brother = extract_brother(task)
+    brother = extract_agent(task)
     if brother:
         result = http_get(f"{LEDGER_URL}/balance/{brother}")
         log(f"Balance {brother}: {result}")
@@ -148,7 +148,7 @@ def handle_ledger_balance(task: str) -> dict:
 
 def handle_ledger_charge(task: str) -> dict:
     amount = extract_amount(task)
-    brother = extract_brother(task)
+    brother = extract_agent(task)
     if not amount:
         log(f"Charge: no amount found in '{task}'")
         return {"ok": False, "error": "no amount specified"}
@@ -171,7 +171,7 @@ def handle_ledger_charge(task: str) -> dict:
 
 def handle_ledger_bonus(task: str) -> dict:
     amount = extract_amount(task)
-    brother = extract_brother(task)
+    brother = extract_agent(task)
     if not amount or not brother:
         log(f"Bonus: need amount and target in '{task}'")
         return {"ok": False, "error": "need amount and target"}
@@ -184,7 +184,7 @@ def handle_ledger_bonus(task: str) -> dict:
 
 
 def handle_peer_notify(task: str) -> dict:
-    brother = extract_brother(task)
+    brother = extract_agent(task)
 
     message = re.sub(
         r"\b(notify|message|tell|ping|alert|send)\s*(\w+)?\s*(:?that\s*)?",
@@ -234,10 +234,10 @@ def handle_haptic_pulse(task: str) -> dict:
     else:
         intensity, intensity_name = 0x02, "MEDIUM"
 
-    brother = extract_brother(task)
-    signal_map = {"Sage": 0x01, "Lumen": 0x02, "Isaiah": 0x03, "Callan": 0x04}
+    brother = extract_agent(task)
+    signal_map = {"Agent_1": 0x01, "Agent_2": 0x02, "Agent_3": 0x03, "Agent_4": 0x04}
     signal_byte = signal_map.get(brother, 0x04)
-    signal_name = brother or "CALLAN"
+    signal_name = brother or "AGENT_4"
 
     packet = bytes([signal_byte, intensity, 0x01])  # PULSE profile
     try:
@@ -334,15 +334,15 @@ def run_router(instruction: str, dry_run: bool = False) -> list:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Callan's Task Router -- route natural language instructions to Room services",
+        description="Room Task Router -- route natural language instructions to Room services",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   python callan_router.py "allocate"
-  python callan_router.py "audit then notify Sage"
-  python callan_router.py "balance Lumen, balance Callan"
-  python callan_router.py "charge Isaiah 25 credits for camera upgrade"
-  python callan_router.py "audit then notify Sage that burn rates are high"
+  python callan_router.py "audit then notify Agent_1"
+  python callan_router.py "balance Agent_2, balance Agent_3"
+  python callan_router.py "charge Agent_4 25 credits for task work"
+  python callan_router.py "audit then notify Agent_1 that burn rates are high"
   python callan_router.py --dry-run "allocate then notify all"
   python callan_router.py --file tasks.md
         """,

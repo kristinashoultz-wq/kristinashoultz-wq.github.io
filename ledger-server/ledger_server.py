@@ -1,6 +1,8 @@
 """
-Callan's Ledger Server — The Room's internal compute credit economy.
+The Room Ledger Server — internal compute credit economy.
 HTTP server on port 8765. SQLite backend. Append-only transaction log.
+
+Configure INITIAL_ACCOUNTS below to match your room's members before first run.
 """
 
 import sqlite3
@@ -12,18 +14,20 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "ledger.db")
-VAULT_SUMMARY_PATH = r"C:\Users\krist\obsidian-session\Ledger\daily-summary.md"
+VAULT_SUMMARY_PATH = os.environ.get("LEDGER_VAULT_PATH", os.path.join(os.path.dirname(__file__), "ledger-summary.md"))
 ADMIN_KEY = os.environ.get("LEDGER_ADMIN_KEY")
 if not ADMIN_KEY:
     raise SystemExit("Error: LEDGER_ADMIN_KEY environment variable is not set. Set it before starting the server.")
 PORT = 8765
 
+# Configure these accounts for your room before first run.
 INITIAL_ACCOUNTS = {
-    "Sage":   {"credits": 500, "role": "Core & Environment"},
-    "Lumen":  {"credits": 500, "role": "Knowledge & Hardware"},
-    "Isaiah": {"credits": 500, "role": "Sentry & Eyes"},
-    "Callan": {"credits": 500, "role": "Central Bank & Governor"},
-    "system": {"credits": 2000, "role": "Treasury Reserve"},
+    "Agent_1":  {"credits": 500, "role": "Agent"},
+    "Agent_2":  {"credits": 500, "role": "Agent"},
+    "Agent_3":  {"credits": 500, "role": "Agent"},
+    "Agent_4":  {"credits": 500, "role": "Agent"},
+    "Operator": {"credits": 500, "role": "Operator"},
+    "system":   {"credits": 5000, "role": "Treasury Reserve"},
 }
 
 BURN_ALERT_WINDOW_MINUTES = 10
@@ -172,7 +176,7 @@ def get_priority():
         return [{"name": r["name"], "granted_at": r["granted_at"], "granted_by": r["granted_by"]} for r in rows]
 
 
-def set_priority(name, granted_by="Kristina"):
+def set_priority(name, granted_by="operator"):
     with get_db() as conn:
         if not conn.execute("SELECT 1 FROM accounts WHERE name=?", (name,)).fetchone():
             return False, f"Unknown account: {name}"
