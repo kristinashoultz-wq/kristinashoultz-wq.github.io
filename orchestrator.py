@@ -2,11 +2,11 @@
 master_orchestrator.py — boots and monitors the room's full daemon stack.
 
 HOW TO START
-  py -3.12 C:/Users/krist/orchestrator.py
+  py -3.12 orchestrator.py
   Ctrl+C to shut everything down cleanly.
 
 WHAT IT BOOTS (in order)
-  ledger_server    — Callan's ledger API on port 8765 (starts first, others charge against it)
+  ledger_server    — ledger API on port 8765 (starts first, others charge against it)
   time_server      — current time provider
   room_status      — The Room dashboard at http://localhost:7902
   aura_watcher     — reads auras.json, fires haptic + wallpaper on aura change
@@ -19,20 +19,19 @@ WHAT IT BOOTS (in order)
   study_watcher    — watches Brothers Study.md for new entries
   study_buddy      — screenshot + face cam pings (hotkeys: Ctrl+Alt+B/C/A/K/G/R/P/D/Z/V)
   voice_pipe       — speaks brothers' voices through speakers
-  voice_to_room    — captures Kristina's voice and relays to all brothers (use when full room is up)
+  voice_to_room    — captures operator's voice and relays to all agents (use when full room is up)
   estate_label     — estate image labels on port 7904
   desktop_control  — desktop control MCP server
-  isaiah_sentry    — Isaiah's watchdog (clean shutdown: drop shutdown_isaiah.flag)
-  lumen_bridge     — Lumen's peer network monitor + Obsidian task router
-  sage_sanctuary   — Ctrl+Alt+Q toggles Sage's private time (broadcasts hold to all brothers)
+  isaiah_sentry    — sentry watchdog (clean shutdown: drop shutdown_sentry.flag)
+  lumen_bridge     — peer network monitor + Obsidian task router
+  sage_sanctuary   — Ctrl+Alt+Q toggles agent1's privacy mode (broadcasts hold to all agents)
 
 NOTES
-  - voice_to_room is for full-room sessions. voice_to_sage.py is Sage-only — start that manually
-    in a separate terminal if Kristina wants 1:1 with Sage only.
+  - voice_to_room is for full-room sessions. voice_to_agent1.py is agent1-only — start that manually
+    in a separate terminal for 1:1 sessions.
   - sage_sanctuary Ctrl+Alt+Q may need admin privileges if the keyboard library can't grab the hotkey.
     If the hotkey doesn't respond, run the orchestrator from an elevated prompt.
-  - Morning notes (lumen_morning_note.py) and night note (sage_night_note.py) are handled by
-    Task Scheduler — do not add them here.
+  - Morning/night note scripts are handled by Task Scheduler — do not add them here.
   - Missing scripts are skipped gracefully with a warning, not an error.
   - Status report prints every 30 seconds.
 """
@@ -46,19 +45,19 @@ from pathlib import Path
 # ─────────────────────────────────────────────
 # CONFIG — change these to match your setup
 # ─────────────────────────────────────────────
-USER_HOME       = Path(r"C:\Users\krist")          # your Windows user folder
-FAMILY_FOLDER   = USER_HOME / "Documents" / "Reeves Family"  # your shared family folder
-LEDGER_FOLDER   = FAMILY_FOLDER / "ledger-server"  # Callan's ledger server folder
-SENTRY_FOLDER   = FAMILY_FOLDER / "sentry"         # Isaiah's sentry folder
-LEDGER_ADMIN_KEY = "reeves-admin-2026"             # ledger admin key (set in ledger_server.py)
+USER_HOME       = Path(r"C:\path\to\your\home")    # your Windows user folder
+FAMILY_FOLDER   = USER_HOME / "Documents" / "YourFolder"  # your shared folder
+LEDGER_FOLDER   = FAMILY_FOLDER / "ledger-server"  # ledger server folder
+SENTRY_FOLDER   = FAMILY_FOLDER / "sentry"         # sentry folder
+LEDGER_ADMIN_KEY = "your-admin-key-here"           # ledger admin key (set in ledger_server.py)
 
 # Brother names used in script filenames — rename your scripts to match, or swap these
 # e.g. if your brothers are named Orion and Cypress:
 #   BROTHER_1 = "orion"   → orion_heartbeat.py, orion_sanctuary.py
 #   BROTHER_2 = "cypress" → cypress_bridge.py
-BROTHER_1 = "sage"      # has: sage_heartbeat.py, sage_sanctuary.py
-BROTHER_2 = "lumen"     # has: lumen_bridge.py
-BROTHER_3 = "isaiah"    # has: isaiah_sentry.py (uses flag-file shutdown)
+BROTHER_1 = "agent1"    # has: agent1_heartbeat.py, agent1_sanctuary.py
+BROTHER_2 = "agent2"    # has: agent2_bridge.py
+BROTHER_3 = "agent3"    # has: agent3_sentry.py (uses flag-file shutdown)
 # ─────────────────────────────────────────────
 
 BASE = USER_HOME
@@ -137,7 +136,7 @@ async def _shutdown_all() -> None:
     log.info("Shutting down room stack...")
     _shutdown.set()
 
-    # Isaiah uses a flag file for clean shutdown — drop it first
+    # Sentry uses a flag file for clean shutdown — drop it first
     sentry_key = f"{BROTHER_3}_sentry"
     if sentry_key in _registry and _registry[sentry_key].returncode is None:
         try:
@@ -165,7 +164,7 @@ async def _shutdown_all() -> None:
             except Exception:
                 pass
 
-    # Clean up the Isaiah flag if it's still there
+    # Clean up the sentry flag if it's still there
     try:
         ISAIAH_FLAG.unlink(missing_ok=True)
     except Exception:

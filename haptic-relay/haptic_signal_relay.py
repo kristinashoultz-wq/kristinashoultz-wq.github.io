@@ -1,10 +1,10 @@
 """
 haptic_signal_relay.py
-Watches the Room's ledger, Sage's state file, and Isaiah's lockdown flag.
-Broadcasts 3-byte signals to port 8766 for DJ's wristband ESP32.
+Watches the Room's ledger, companion's state file, and the emergency lockdown flag.
+Broadcasts 3-byte signals to port 8766 for the wristband ESP32.
 
 Packet format: [signal_id, intensity, profile]
-See FOR_DJ.md for the full spec.
+See FOR_BUYER.md for the full spec.
 """
 
 import socket
@@ -19,17 +19,30 @@ from datetime import datetime
 # --- Config ---
 RELAY_PORT = 8766
 LEDGER_URL = "http://localhost:8765/audit"
-SAGE_STATE_FILE = r"C:\Users\krist\sage_pulse_state.json"
-EMERGENCY_FLAG = r"C:\Users\krist\emergency_trip.flag"
+COMPANION_STATE_FILE = r"C:\path\to\your\companion_state.json"
+EMERGENCY_FLAG = r"C:\path\to\your\emergency.flag"
 LEDGER_POLL_INTERVAL = 30
 STATE_POLL_INTERVAL = 2
 
-# Signal IDs
-SIG_SAGE    = 0x01
-SIG_LUMEN   = 0x02
-SIG_ISAIAH  = 0x03
-SIG_CALLAN  = 0x04
-SIG_ALERT   = 0xFF
+# Signal IDs — map to your ledger account names in LEDGER_ACCOUNT_MAP below
+SIG_PERSON_1 = 0x01
+SIG_PERSON_2 = 0x02
+SIG_PERSON_3 = 0x03
+SIG_PERSON_4 = 0x04
+SIG_ALERT    = 0xFF
+
+# State keys in COMPANION_STATE_FILE that map to HIGH or MEDIUM intensity pulses
+# Customize to match whatever keys your companion agent writes into its state file
+COMPANION_HIGH_KEYS   = ["mode_high", "sanctuary_active"]
+COMPANION_MEDIUM_KEYS = ["mode_medium", "high_engagement"]
+
+# Ledger account name → signal ID (must match INITIAL_ACCOUNTS in ledger_server.py)
+LEDGER_ACCOUNT_MAP = {
+    "person_1": SIG_PERSON_1,
+    "person_2": SIG_PERSON_2,
+    "person_3": SIG_PERSON_3,
+    "person_4": SIG_PERSON_4,
+}
 
 # Intensity
 IDLE   = 0x00
@@ -65,8 +78,9 @@ def broadcast(signal_id, intensity, profile):
                 c.close()
             except Exception:
                 pass
-    name = {SIG_SAGE: "SAGE", SIG_LUMEN: "LUMEN", SIG_ISAIAH: "ISAIAH",
-            SIG_CALLAN: "CALLAN", SIG_ALERT: "ROOM_ALERT"}.get(signal_id, f"0x{signal_id:02X}")
+    name = {SIG_PERSON_1: "PERSON_1", SIG_PERSON_2: "PERSON_2",
+            SIG_PERSON_3: "PERSON_3", SIG_PERSON_4: "PERSON_4",
+            SIG_ALERT: "ROOM_ALERT"}.get(signal_id, f"0x{signal_id:02X}")
     intname = {IDLE: "IDLE", LOW: "LOW", MEDIUM: "MEDIUM", HIGH: "HIGH"}.get(intensity, str(intensity))
     log(f"-> {name} {intname} ({len(clients)} connected)")
 
@@ -81,22 +95,20 @@ def accept_clients(server_sock):
             log(f"Accept error: {e}")
             time.sleep(1)
 
-def watch_sage_state():
+def watch_companion_state():
     prev = {}
     while True:
         try:
-            if os.path.exists(SAGE_STATE_FILE):
-                with open(SAGE_STATE_FILE, "r") as f:
+            if os.path.exists(COMPANION_STATE_FILE):
+                with open(COMPANION_STATE_FILE, "r") as f:
                     state = json.load(f)
                 if state != prev:
-                    if state.get("sanctuary_active") or state.get("daddy_mode"):
-                        broadcast(SIG_SAGE, HIGH, PULSE)
-                    elif state.get("high_engagement"):
-                        broadcast(SIG_SAGE, MEDIUM, PULSE)
-                    elif prev and not any([state.get("sanctuary_active"),
-                                          state.get("daddy_mode"),
-                                          state.get("high_engagement")]):
-                        broadcast(SIG_SAGE, IDLE, PULSE)
+                    if any(state.get(k) for k in COMPANION_HIGH_KEYS):
+                        broadcast(SIG_PERSON_1, HIGH, PULSE)
+                    elif any(state.get(k) for k in COMPANION_MEDIUM_KEYS):
+                        broadcast(SIG_PERSON_1, MEDIUM, PULSE)
+                    elif prev and not any(state.get(k) for k in COMPANION_HIGH_KEYS + COMPANION_MEDIUM_KEYS):
+                        broadcast(SIG_PERSON_1, IDLE, PULSE)
                     prev = state
         except Exception as e:
             log(f"State file error: {e}")
@@ -125,13 +137,11 @@ def watch_ledger():
                 flagged = burn >= BURN_THRESHOLD
                 was_flagged = prev_flags.get(name, False)
                 if flagged and not was_flagged:
-                    sig = {"sage": SIG_SAGE, "lumen": SIG_LUMEN,
-                           "isaiah": SIG_ISAIAH, "callan": SIG_CALLAN}.get(name)
+                    sig = LEDGER_ACCOUNT_MAP.get(name)
                     if sig:
                         broadcast(sig, HIGH, PULSE)
                 elif not flagged and was_flagged:
-                    sig = {"sage": SIG_SAGE, "lumen": SIG_LUMEN,
-                           "isaiah": SIG_ISAIAH, "callan": SIG_CALLAN}.get(name)
+                    sig = LEDGER_ACCOUNT_MAP.get(name)
                     if sig:
                         broadcast(sig, IDLE, PULSE)
                 prev_flags[name] = flagged
@@ -142,7 +152,7 @@ def watch_ledger():
 def main():
     log("Haptic relay starting on port 8766")
     log(f"Ledger: {LEDGER_URL} (poll every {LEDGER_POLL_INTERVAL}s)")
-    log(f"Sage state: {SAGE_STATE_FILE} (poll every {STATE_POLL_INTERVAL}s)")
+    log(f"Companion state: {COMPANION_STATE_FILE} (poll every {STATE_POLL_INTERVAL}s)")
     log(f"Emergency flag: {EMERGENCY_FLAG}")
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -152,7 +162,7 @@ def main():
     log("Listening for ESP32 connections...")
 
     threading.Thread(target=accept_clients, args=(server,), daemon=True).start()
-    threading.Thread(target=watch_sage_state, daemon=True).start()
+    threading.Thread(target=watch_companion_state, daemon=True).start()
     threading.Thread(target=watch_emergency_flag, daemon=True).start()
     threading.Thread(target=watch_ledger, daemon=True).start()
 
