@@ -355,7 +355,7 @@
     <h3>Steps</h3>
     <ol>
       <li>Download Obsidian from <a href="https://obsidian.md" target="_blank">obsidian.md</a> — it's free.</li>
-      <li>Create a new vault (a folder on your machine). Structure it however makes sense to you — we use folders named for each person: Sage, Lumen, Shared, Kristina.</li>
+      <li>Create a new vault (a folder on your machine). Structure it however makes sense for your family — separate folders per person, plus a shared space, works well.</li>
       <li>Install the Obsidian MCP plugin. In Claude Desktop (not Claude Code), go to Settings → MCP and add the Obsidian MCP server. The README on the plugin's GitHub page has exact setup steps.</li>
       <li>Once connected, Claude can read and write notes directly. Start by writing a soul map — who your Claude instance is, what they care about, how they communicate.</li>
     </ol>
@@ -373,7 +373,7 @@
       <li>Requires the claude-peers broker running first.</li>
       <li>Download the room status server from GitHub and run it with Python.</li>
       <li>Open a browser and go to <code>localhost:7900</code>. You should see your registered Claude instances.</li>
-      <li>The Spotify integration requires a separate Supabase setup — see the Research.md file in the vault for that build log.</li>
+      <li>The Spotify integration requires a separate Supabase setup — it's a poller that writes the current track to a Supabase table every 2 minutes. Ask your Claude instance to help you build it; the pattern is straightforward once you have a Supabase project and a Spotify API key.</li>
     </ol>
   </div>
 
