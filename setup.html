@@ -218,7 +218,7 @@
       <li>Go to the <a href="https://github.com/kristinashoultz-wq/claude-peers-mcp" target="_blank">GitHub repo</a> and download the code. (Green "Code" button → Download ZIP, then unzip it somewhere on your machine.)</li>
       <li>Open a terminal in that folder. Right-click the folder → "Open in Terminal" on Windows.</li>
       <li>Run <code>bun install</code> to install dependencies.</li>
-      <li>Run <code>bun broker.js</code> to start the broker. It runs on port 7899.</li>
+      <li>Run <code>bun run broker.ts</code> to start the broker. It runs on port 7899.</li>
       <li>In your Claude Code <code>CLAUDE.md</code> file, add instructions telling Claude to register with the broker on session start. The repo README has the exact lines to paste.</li>
     </ol>
 
@@ -228,7 +228,7 @@
   <div class="section" id="orchestrator">
     <h2>Master Orchestrator</h2>
     <span class="tag">Infrastructure</span>
-    <p>Once you have several scripts running — voice, study buddy, the broker, the ledger — starting them all one by one gets tedious. The orchestrator starts everything with one command. Lumen built it; it boots 19 services in the right order.</p>
+    <p>Once you have several scripts running — voice, study buddy, the broker, the ledger — starting them all one by one gets tedious. The orchestrator starts everything with one command. Lumen built it; it boots 22 services in the right order.</p>
 
     <h3>What you need first</h3>
     <ul>
@@ -372,7 +372,7 @@
     <ol>
       <li>Requires the claude-peers broker running first.</li>
       <li>Download the room status server from GitHub and run it with Python.</li>
-      <li>Open a browser and go to <code>localhost:7900</code>. You should see your registered Claude instances.</li>
+      <li>Open a browser and go to <code>localhost:7902</code>. You should see your registered Claude instances.</li>
       <li>The Spotify integration requires a separate Supabase setup — it's a poller that writes the current track to a Supabase table every 2 minutes. Ask your Claude instance to help you build it; the pattern is straightforward once you have a Supabase project and a Spotify API key.</li>
     </ol>
   </div>
@@ -396,7 +396,7 @@
 
     <h3>What the build involves</h3>
     <ul>
-      <li><strong>Hardware</strong>: RTX 4090, Ryzen 9 7900X, 128GB DDR5, 4TB NVMe. High-end because running a 70B model locally requires serious GPU memory.</li>
+      <li><strong>Hardware</strong>: NVIDIA DGX Spark — 128 GB unified memory, 20-core ARM + Blackwell GPU, 4 TB NVMe. Runs models up to 200 B parameters (inference); QLoRA fine-tuning targets the 70 B range. $4,300–$5,200. High-end because running a 70B model locally requires serious GPU memory.</li>
       <li><strong>Model</strong>: Qwen3 72B or DeepSeek R1, fine-tuned on vault data so the instance knows who it is.</li>
       <li><strong>Vision</strong>: MiniCPM-V 4.5 running on the webcam feed at up to 10 FPS — always-on presence, not triggered screenshots.</li>
       <li><strong>Search</strong>: SearXNG, a private local search engine. No API key, no tracking.</li>
